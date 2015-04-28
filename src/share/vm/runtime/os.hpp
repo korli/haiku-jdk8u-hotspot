@@ -52,6 +52,10 @@
 #  include <mach/mach_time.h>
 # endif
 #endif
+#ifdef TARGET_OS_FAMILY_haiku
+# include "jvm_haiku.h"
+# include <setjmp.h>
+#endif
 
 class AgentLibrary;
 
@@ -843,6 +847,10 @@ class os: AllStatic {
 # include "os_posix.hpp"
 # include "os_bsd.hpp"
 #endif
+#ifdef TARGET_OS_FAMILY_haiku
+# include "os_posix.hpp"
+# include "os_haiku.hpp"
+#endif
 #ifdef TARGET_OS_ARCH_linux_x86
 # include "os_linux_x86.hpp"
 #endif
@@ -875,6 +883,9 @@ class os: AllStatic {
 #endif
 #ifdef TARGET_OS_ARCH_bsd_zero
 # include "os_bsd_zero.hpp"
+#endif
+#ifdef TARGET_OS_ARCH_haiku_x86
+# include "os_haiku_x86.hpp"
 #endif
 
  public:

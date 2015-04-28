@@ -56,6 +56,9 @@
 #ifdef TARGET_OS_FAMILY_bsd
 # include "os_bsd.inline.hpp"
 #endif
+#ifdef TARGET_OS_FAMILY_haiku
+# include "os_haiku.inline.hpp"
+#endif
 
 
 static void mangle_name_on(outputStream* st, Symbol* name, int begin, int end) {
