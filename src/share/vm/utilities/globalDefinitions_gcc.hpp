@@ -130,7 +130,7 @@
   #define NULL_WORD  NULL
 #endif
 
-#if !defined(LINUX) && !defined(_ALLBSD_SOURCE)
+#if !defined(LINUX) && !defined(_ALLBSD_SOURCE) && !defined(HAIKU)
 // Compiler-specific primitive types
 typedef unsigned short     uint16_t;
 #ifndef _UINT32_T
@@ -150,7 +150,7 @@ typedef unsigned int            uintptr_t;
 // prior definition of intptr_t, and add "&& !defined(XXX)" above.
 #endif // _SYS_INT_TYPES_H
 
-#endif // !LINUX && !_ALLBSD_SOURCE
+#endif // !LINUX && !_ALLBSD_SOURCE && !HAIKU
 
 // Additional Java basic types
 
@@ -234,7 +234,7 @@ inline int g_isnan(float  f) { return isnand(f); }
 inline int g_isnan(double f) { return isnand(f); }
 #elif defined(__APPLE__)
 inline int g_isnan(double f) { return isnan(f); }
-#elif defined(LINUX) || defined(_ALLBSD_SOURCE)
+#elif defined(LINUX) || defined(_ALLBSD_SOURCE) || defined(HAIKU)
 inline int g_isnan(float  f) { return isnanf(f); }
 inline int g_isnan(double f) { return isnan(f); }
 #else
