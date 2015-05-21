@@ -63,7 +63,7 @@
 #include "services/runtimeService.hpp"
 #include "utilities/decoder.hpp"
 #include "utilities/defaultStream.hpp"
-#include "utilities/elf_haiku.h"
+#include "utilities/elf.h"
 #include "utilities/events.hpp"
 #include "utilities/elfFile.hpp"
 #include "utilities/growableArray.hpp"
@@ -135,7 +135,6 @@ static void unpackTime(timespec* absTime, bool isAbsolute, jlong time);
 // utility functions
 
 static int SR_initialize();
-static int SR_finalize();
 
 julong os::available_memory() {
   return Haiku::available_memory();
@@ -150,15 +149,6 @@ julong os::Haiku::available_memory() {
 
 julong os::physical_memory() {
   return Haiku::physical_memory();
-}
-
-julong os::allocatable_physical_memory(julong size) {
-#ifdef _LP64
-  return size;
-#else
-  // Limit to 1400m because of the 2gb address space wall
-  return MIN2(size, (julong)1400*M);
-#endif // _LP64
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -455,8 +445,6 @@ void os::Haiku::hotspot_sigmask(Thread* thread) {
 
 //////////////////////////////////////////////////////////////////////////////
 // create new thread
-
-static address highest_vm_reserved_address();
 
 // Thread start routine for all newly created threads
 static void *java_start(Thread *thread) {
@@ -1000,15 +988,6 @@ void * os::dll_load(const char *filename, char *ebuf, int ebuflen)
     return result;
   }
 
-  // Read system error message into ebuf
-  ::strncpy(ebuf, ::dlerror(), ebuflen-1);
-  ebuf[ebuflen-1]='\0';
-  return NULL;
-
-  // The code below generates a more detailed diagnostic error
-  // message, but we don't have an elf header complete enough
-  // to support it.
-#if 0
   Elf32_Ehdr elf_head;
 
   // Read system error message into ebuf
@@ -1154,7 +1133,6 @@ void * os::dll_load(const char *filename, char *ebuf, int ebuflen)
     }
   }
   return NULL;
-#endif
 }
 
 
@@ -1164,23 +1142,6 @@ void* os::dll_lookup(void* handle, const char* name) {
 
 void* os::get_default_process_handle() {
   return (void*)::dlopen(NULL, RTLD_LAZY);
-}
-
-static bool _print_ascii_file(const char* filename, outputStream* st) {
-  int fd = ::open(filename, O_RDONLY);
-  if (fd == -1) {
-     return false;
-  }
-
-  char buf[32];
-  int bytes;
-  while ((bytes = ::read(fd, buf, sizeof(buf))) > 0) {
-    st->print_raw(buf, bytes);
-  }
-
-  ::close(fd);
-
-  return true;
 }
 
 void os::print_dll_info(outputStream *st) {
@@ -1228,7 +1189,7 @@ void os::print_memory_info(outputStream* st) {
 }
 
 void os::print_siginfo(outputStream* st, void* siginfo) {
-  const siginfo_t* si = (const siginfo_t*)siginfo'
+  const siginfo_t* si = (const siginfo_t*)siginfo;
 
   os::Posix::print_siginfo_brief(st, si);
 #if INCLUDE_CDS
@@ -1236,8 +1197,8 @@ void os::print_siginfo(outputStream* st, void* siginfo) {
       UseSharedSpaces) {
     FileMapInfo* mapinfo = FileMapInfo::current_info();
     if (mapinfo->is_in_shared_space(si->si_addr)) {
-      st->print("\n\nError accessing class data sharing archive."   \
-                " Mapped file inaccessible during execution, "      \
+      st->print("\n\nError accessing class data sharing archive."
+                " Mapped file inaccessible during execution, "
                 " possible disk/network problem.");
     }
   }
@@ -1630,8 +1591,6 @@ bool os::remove_stack_guard_pages(char* addr, size_t size) {
   return os::uncommit_memory(addr, size);
 }
 
-static address _highest_vm_reserved_address = NULL;
-
 // If 'fixed' is true, anon_mmap() will attempt to reserve anonymous memory
 // at 'requested_addr'. If there are existing memory mappings at the same
 // location, however, they will be overwritten. If 'fixed' is false,
@@ -1654,23 +1613,9 @@ static char* anon_mmap(char* requested_addr, size_t bytes, bool fixed) {
   addr = (char*)::mmap(requested_addr, bytes, PROT_NONE,
                        flags, -1, 0);
 
-  if (addr != MAP_FAILED) {
-    // anon_mmap() should only get called during VM initialization,
-    // don't need lock (actually we can skip locking even it can be called
-    // from multiple threads, because _highest_vm_reserved_address is just a
-    // hint about the upper limit of non-stack memory regions.)
-    if ((address)addr + bytes > _highest_vm_reserved_address) {
-      _highest_vm_reserved_address = (address)addr + bytes;
-    }
-  }
-
   return addr == MAP_FAILED ? NULL : addr;
 }
 
-// Don't update _highest_vm_reserved_address, because there might be memory
-// regions above addr + size. If so, releasing a memory region only creates
-// a hole in the address space, it doesn't help prevent heap-stack collision.
-//
 static int anon_munmap(char * addr, size_t size) {
   return ::munmap(addr, size) == 0;
 }
@@ -1682,10 +1627,6 @@ char* os::pd_reserve_memory(size_t bytes, char* requested_addr,
 
 bool os::pd_release_memory(char* addr, size_t size) {
   return anon_munmap(addr, size);
-}
-
-static address highest_vm_reserved_address() {
-  return _highest_vm_reserved_address;
 }
 
 static bool haiku_mprotect(char* addr, size_t size, int prot) {
@@ -1765,7 +1706,7 @@ char* os::pd_attempt_reserve_memory_at(size_t bytes, char* requested_addr) {
   	return addr;
   }
 
-  int result = munmap(addr, bytes);
+  int result = anon_munmap(addr, bytes);
   assert(result, "munmap failed");
   return NULL;
 }
@@ -1847,9 +1788,21 @@ int os::sleep(Thread* thread, jlong millis, bool interruptible) {
   }
 }
 
-int os::naked_sleep() {
-  // %% make the sleep time an integer flag. for now use 1 millisec.
-  return os::sleep(Thread::current(), 1, false);
+void os::naked_short_sleep(jlong ms) {
+  struct timespec req;
+
+  assert(ms < 1000, "Un-interruptable sleep, short time use only");
+  req.tv_sec = 0;
+  if (ms > 0) {
+    req.tv_nsec = (ms % 1000) * 1000000;
+  }
+  else {
+    req.tv_nsec = 1;
+  }
+
+  nanosleep(&req, NULL);
+
+  return;
 }
 
 // Sleep forever; naked call to OS-specific sleep; use with CAUTION

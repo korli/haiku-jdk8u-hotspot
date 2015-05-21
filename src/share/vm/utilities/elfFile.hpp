@@ -30,11 +30,7 @@
 #if defined(__OpenBSD__)
 #include <sys/exec_elf.h>
 #elif defined(HAIKU)
-#ifdef _LP64
-#include <private/system/elf64.h>
-#else
-#include <private/system/elf32.h>
-#endif
+#include "utilities/elf.h"
 #else
 #include <elf.h>
 #endif
