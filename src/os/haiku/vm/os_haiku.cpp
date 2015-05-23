@@ -2183,19 +2183,19 @@ bool os::is_interrupted(Thread* thread, bool clear_interrupted) {
 // handlers, unless invoked with the option "-XX:+AllowUserSignalHandlers".
 //
 extern "C" JNIEXPORT int
-JVM_handle_linux_signal(int signo, siginfo_t* siginfo,
+JVM_handle_haiku_signal(int signo, siginfo_t* siginfo,
                         void* ucontext, int abort_if_unrecognized);
 
 void signalHandler(int sig, siginfo_t* info, void* uc) {
   assert(info != NULL && uc != NULL, "it must be old kernel");
   int orig_errno = errno;  // Preserve errno value over signal handler.
-  JVM_handle_linux_signal(sig, info, uc, true);
+  JVM_handle_haiku_signal(sig, info, uc, true);
   errno = orig_errno;
 }
 
 
 // This boolean allows users to forward their own non-matching signals
-// to JVM_handle_linux_signal, harmlessly.
+// to JVM_handle_haiku_signal, harmlessly.
 bool os::Haiku::signal_handlers_are_installed = false;
 
 // For signal-chaining
