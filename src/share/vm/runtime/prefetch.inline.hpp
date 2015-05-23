@@ -71,7 +71,7 @@
 #endif
 
 // Haiku
-#ifdef TARGET_OS_ARCH_bsd_x86
+#ifdef TARGET_OS_ARCH_haiku_x86
 # include "prefetch_haiku_x86.inline.hpp"
 #endif
 
