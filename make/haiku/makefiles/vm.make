@@ -255,15 +255,7 @@ mapfile_ext:
 	  cat $(HS_ALT_MAKE)/haiku/makefiles/mapfile-ext > $@; \
 	fi
 
-ifeq ($(JVM_VARIANT_ZEROSHARK), true)
-  STATIC_CXX = false
-else
-  ifeq ($(ZERO_LIBARCH), ppc64)
-    STATIC_CXX = false
-  else
-    STATIC_CXX = true
-  endif
-endif
+STATIC_CXX = false
 
 ifeq ($(LINK_INTO),AOUT)
   LIBJVM.o                 =
@@ -281,8 +273,9 @@ else
   ifeq ($(STATIC_CXX), true)
     LFLAGS_VM              += $(STATIC_LIBGCC)
     LIBS_VM                += $(STATIC_STDCXX)
+    LINK_VM                = $(LINK_LIB.CC)
   else
-    LIBS_VM                += -lstdc++
+    LINK_VM                = $(LINK_LIB.CXX)
   endif
 
   LIBS_VM                  += $(LIBS)
@@ -295,7 +288,6 @@ ifeq ($(JVM_VARIANT_ZEROSHARK), true)
   LFLAGS_VM += $(LLVM_LDFLAGS)
 endif
 
-LINK_VM = $(LINK_LIB.CC)
 
 # rule for building precompiled header
 $(PRECOMPILED_HEADER):
