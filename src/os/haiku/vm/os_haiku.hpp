@@ -80,7 +80,7 @@ class Haiku {
     intptr_t** ret_sp, intptr_t** ret_fp);
 
   // This boolean allows users to forward their own non-matching signals
-  // to JVM_handle_linux_signal, harmlessly.
+  // to JVM_handle_haiku_signal, harmlessly.
   static bool signal_handlers_are_installed;
 
   static int get_our_sigflags(int);
