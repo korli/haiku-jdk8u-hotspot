@@ -548,18 +548,7 @@ bool os::is_allocatable(size_t bytes) {
   // unused on amd64?
   return true;
 #else
-
-  if (bytes < 2 * G) {
-    return true;
-  }
-
-  char* addr = reserve_memory(bytes, NULL);
-
-  if (addr != NULL) {
-    release_memory(addr, bytes);
-  }
-
-  return addr != NULL;
+  return bytes <= (size_t)1400 * M;
 #endif // AMD64
 }
 
