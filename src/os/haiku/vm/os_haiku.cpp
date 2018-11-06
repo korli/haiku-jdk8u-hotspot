@@ -2892,6 +2892,10 @@ os::os_exception_wrapper(java_call_t f, JavaValue* value, methodHandle* method,
 void os::print_statistics() {
 }
 
+bool os::is_primordial_thread(void) {
+  return find_thread(NULL) == getpid();
+}
+
 address os::current_stack_base() {
   thread_info ti;
   get_thread_info(find_thread(NULL), &ti);
