@@ -374,10 +374,23 @@ static DIR *open_directory_secure_cwd(const char* dirname, int *saved_cwd_fd) {
     *saved_cwd_fd = result;
   }
 
-  // Set the current directory to dirname by using the fd of the directory.
+  // Set the current directory to dirname by using the fd of the directory and
+  // handle errors, otherwise shared memory files will be created in cwd.
   result = fchdir(fd);
-
-  return dirp;
+  if (result == OS_ERR) {
+    if (PrintMiscellaneous && Verbose) {
+      warning("could not change to directory %s", dirname);
+    }
+    if (*saved_cwd_fd != -1) {
+      ::close(*saved_cwd_fd);
+      *saved_cwd_fd = -1;
+    }
+    // Close the directory.
+    os::closedir(dirp);
+    return NULL;
+  } else {
+    return dirp;
+  }
 }
 
 // Close the directory and restore the current working directory.
