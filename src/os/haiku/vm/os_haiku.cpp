@@ -1703,11 +1703,13 @@ char* os::pd_attempt_reserve_memory_at(size_t bytes, char* requested_addr) {
 
   char* addr = anon_mmap(requested_addr, bytes, false);
   if (addr == requested_addr) {
-  	return addr;
+     return addr;
   }
 
-  int result = anon_munmap(addr, bytes);
-  assert(result, "munmap failed");
+  if (addr != NULL) {
+     // mmap() is successful but it fails to reserve at the requested address
+     anon_munmap(addr, bytes);
+  }
   return NULL;
 }
 
