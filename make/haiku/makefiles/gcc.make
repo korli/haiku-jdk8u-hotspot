@@ -215,6 +215,10 @@ ifeq ($(USE_CLANG), true)
   WARNINGS_ARE_ERRORS += -Wno-return-type -Wno-empty-body
 endif
 
+ifeq ($(shell expr $(CC_VER_MAJOR) = 8), 1)
+  # gcc8
+  WARNINGS_ARE_ERRORS += -Wno-stringop-overflow -Wno-return-type
+endif
 WARNING_FLAGS = -Wpointer-arith -Wsign-compare -Wundef -Wunused-function -Wunused-value
 
 ifeq ($(USE_CLANG),)
